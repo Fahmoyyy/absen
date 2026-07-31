@@ -1,38 +1,15 @@
-const loginView = document.getElementById('login-view');
 const dashboardView = document.getElementById('dashboard-view');
-const passwordInput = document.getElementById('password-input');
-const loginError = document.getElementById('login-error');
 
 function getPassword() {
   return sessionStorage.getItem('admin_password');
 }
 
-async function tryLogin(password) {
-  const result = await callApi('checkPassword', { password });
-  if (!result.ok) {
-    loginError.classList.remove('hidden');
-    return;
-  }
-  sessionStorage.setItem('admin_password', password);
-  showDashboard();
-}
-
-document.getElementById('login-btn').addEventListener('click', () => {
-  loginError.classList.add('hidden');
-  tryLogin(passwordInput.value);
-});
-
-passwordInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') document.getElementById('login-btn').click();
-});
-
 document.getElementById('logout-btn').addEventListener('click', () => {
   sessionStorage.removeItem('admin_password');
-  location.reload();
+  location.href = 'index.html';
 });
 
 function showDashboard() {
-  loginView.classList.add('hidden');
   dashboardView.classList.remove('hidden');
   document.getElementById('rekap-tanggal').value = new Date().toISOString().slice(0, 10);
   showSection('dashboard');
@@ -208,4 +185,8 @@ function renderRekap(rekap) {
   });
 }
 
-if (getPassword()) showDashboard();
+if (getPassword()) {
+  showDashboard();
+} else {
+  location.href = 'index.html';
+}

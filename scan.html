@@ -9,49 +9,46 @@
 </head>
 <body class="min-h-screen bg-gray-100">
 
-  <!-- LOGIN PESERTA -->
-  <div id="identify-view" class="hidden min-h-screen flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm">
-      <h1 class="text-xl font-bold text-gray-800 mb-1 text-center">Absensi KKN</h1>
-      <p class="text-sm text-gray-400 mb-6 text-center">Login Peserta</p>
-
-      <label class="block text-sm text-gray-600 mb-1">NIM</label>
-      <input id="nim-input" type="text" placeholder="Masukkan NIM"
-             class="w-full border border-gray-300 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-      <label class="block text-sm text-gray-600 mb-1">Password</label>
-      <input id="password-input" type="password" placeholder="Masukkan password"
-             class="w-full border border-gray-300 rounded-lg px-4 py-3 mb-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-      <p class="text-xs text-gray-400 mb-4">Gunakan NIM &amp; password yang sudah diberikan admin. Setelah berhasil login, HP ini akan mengingat kamu untuk kunjungan berikutnya.</p>
-      <button id="lanjut-btn"
-              class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition">
-        Masuk
-      </button>
-      <p id="login-error" class="text-red-600 text-sm mt-3 text-center hidden"></p>
-      <a href="index.html" class="block text-center text-gray-400 text-sm mt-6">&larr; Kembali</a>
-    </div>
-  </div>
-
   <!-- MAIN (setelah login) -->
   <div id="main-view" class="hidden min-h-screen">
-    <header class="bg-slate-900 text-white px-4 py-4 flex items-center justify-between flex-wrap gap-2">
-      <div>
-        <p class="font-bold">Absensi KKN</p>
-        <p class="text-xs text-slate-400">Login sebagai <span id="identity-name" class="text-slate-200 font-medium"></span></p>
+    <header class="bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-5 pt-6 pb-9 rounded-b-3xl shadow-md">
+      <div class="flex items-center gap-3 max-w-sm mx-auto">
+        <div class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-xl font-bold shrink-0">
+          <span id="identity-initial"></span>
+        </div>
+        <div>
+          <p id="greeting-text" class="font-semibold text-lg leading-tight"></p>
+          <p class="text-teal-50 text-xs">Absensi KKN</p>
+        </div>
       </div>
-      <button class="change-identity-btn text-xs text-slate-400 hover:text-red-400 border border-slate-700 rounded-lg px-3 py-1.5">
-        Ganti Akun
-      </button>
     </header>
 
-    <main class="max-w-sm mx-auto p-4">
-      <div class="flex mb-4 rounded-lg bg-gray-200/70 p-1">
-        <button data-tab="absen" class="tab-btn flex-1 py-2 rounded-md font-medium text-sm transition">📷 Absen</button>
-        <button data-tab="laporan" class="tab-btn flex-1 py-2 rounded-md font-medium text-sm transition">📄 Laporan</button>
+    <main class="max-w-sm mx-auto px-4 -mt-4 pb-24">
+
+      <!-- TAB DASHBOARD -->
+      <div id="tab-dashboard" class="tab-panel space-y-4">
+        <div class="bg-white rounded-3xl shadow p-5">
+          <p class="text-sm text-gray-400 mb-2">Status Hari Ini</p>
+          <div id="status-absen-hari-ini" class="flex items-center gap-3"></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <button data-goto-tab="absen" class="goto-tab-btn bg-white rounded-2xl shadow p-4 text-left hover:shadow-md transition">
+            <p class="text-2xl mb-1">📷</p>
+            <p class="font-semibold text-gray-800 text-sm">Absen Sekarang</p>
+          </button>
+          <button data-goto-tab="laporan" class="goto-tab-btn bg-white rounded-2xl shadow p-4 text-left hover:shadow-md transition">
+            <p class="text-2xl mb-1">📄</p>
+            <p class="font-semibold text-gray-800 text-sm">Upload Laporan</p>
+          </button>
+        </div>
+
+        <button class="change-identity-btn w-full text-center text-gray-400 text-sm py-2">Bukan kamu? Ganti Akun</button>
       </div>
 
       <!-- TAB ABSEN -->
-      <div id="tab-absen" class="tab-panel">
-        <div class="bg-white rounded-2xl shadow p-4">
+      <div id="tab-absen" class="tab-panel hidden">
+        <div class="bg-white rounded-3xl shadow p-4">
           <div id="scan-view">
             <div id="qr-reader" class="rounded-xl overflow-hidden"></div>
             <p class="text-center text-gray-400 text-sm mt-3">Arahkan kamera ke QR absensi</p>
@@ -61,7 +58,7 @@
             <p id="result-icon" class="text-5xl mb-3"></p>
             <p id="result-message" class="text-gray-700 font-medium mb-6"></p>
             <button id="reset-btn"
-                    class="w-full bg-gray-800 hover:bg-black text-white font-semibold py-3 rounded-lg transition">
+                    class="w-full bg-gray-800 hover:bg-black text-white font-semibold py-3 rounded-xl transition">
               Scan Lagi
             </button>
           </div>
@@ -70,31 +67,46 @@
 
       <!-- TAB LAPORAN -->
       <div id="tab-laporan" class="tab-panel hidden space-y-4">
-        <div class="bg-white rounded-2xl shadow p-5 space-y-3">
+        <div class="bg-white rounded-3xl shadow p-5 space-y-3">
           <div>
             <label class="block text-sm text-gray-600 mb-1">Judul / Keterangan</label>
             <input id="laporan-judul" type="text" placeholder="Contoh: Laporan Mingguan ke-1"
-                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                   class="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500" />
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1">File</label>
             <input id="laporan-file" type="file" class="w-full text-sm" />
           </div>
           <button id="upload-laporan-btn"
-                  class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition">
+                  class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-xl transition">
             Upload Laporan
           </button>
           <p id="upload-status" class="text-sm text-center hidden"></p>
         </div>
 
-        <div class="bg-white rounded-2xl shadow p-5">
+        <div class="bg-white rounded-3xl shadow p-5">
           <p class="text-sm font-semibold text-gray-600 mb-3">Semua Laporan</p>
           <div id="laporan-list" class="space-y-2 max-h-80 overflow-y-auto"></div>
         </div>
       </div>
 
-      <a href="index.html" class="block text-center text-gray-400 text-sm mt-6">&larr; Kembali ke Menu</a>
     </main>
+
+    <!-- BOTTOM TAB BAR -->
+    <nav class="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 flex justify-around py-2 max-w-sm mx-auto shadow-[0_-2px_8px_rgba(0,0,0,0.05)]">
+      <button data-tab="dashboard" class="tab-btn flex flex-col items-center gap-0.5 py-1 px-5 rounded-xl transition">
+        <span class="text-xl">🏠</span>
+        <span class="text-xs font-medium">Dashboard</span>
+      </button>
+      <button data-tab="absen" class="tab-btn flex flex-col items-center gap-0.5 py-1 px-5 rounded-xl transition">
+        <span class="text-xl">📷</span>
+        <span class="text-xs font-medium">Absen</span>
+      </button>
+      <button data-tab="laporan" class="tab-btn flex flex-col items-center gap-0.5 py-1 px-5 rounded-xl transition">
+        <span class="text-xl">📄</span>
+        <span class="text-xs font-medium">Laporan</span>
+      </button>
+    </nav>
   </div>
 
   <script src="js/config.js"></script>

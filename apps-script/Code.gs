@@ -45,8 +45,8 @@ function doGet(e) {
   const action = e.parameter.action;
   try {
     switch (action) {
-      case 'getPeserta':
-        return jsonOut(getPeserta());
+      case 'login':
+        return jsonOut(login(e.parameter.username, e.parameter.password));
       case 'getPesertaAdmin':
         return jsonOut(getPesertaAdmin(e.parameter.password));
       case 'addPeserta':
@@ -57,10 +57,6 @@ function doGet(e) {
         return jsonOut(deletePeserta(e.parameter.password, e.parameter.nim));
       case 'resetPasswordPeserta':
         return jsonOut(resetPasswordPeserta(e.parameter.password, e.parameter.nim, e.parameter.newPassword));
-      case 'loginPeserta':
-        return jsonOut(loginPeserta(e.parameter.nim, e.parameter.password));
-      case 'checkPassword':
-        return jsonOut({ ok: checkAdmin(e.parameter.password) });
       case 'generateToken':
         return jsonOut(generateToken(e.parameter.password));
       case 'getTodayToken':
@@ -71,6 +67,8 @@ function doGet(e) {
         return jsonOut(getRekap(e.parameter.password, e.parameter.tanggal));
       case 'getLaporan':
         return jsonOut(getLaporan());
+      case 'getStatusHariIni':
+        return jsonOut(getStatusHariIni(e.parameter.nim));
       default:
         return jsonOut({ ok: false, message: 'Aksi tidak dikenal' });
     }
@@ -99,10 +97,25 @@ function doPost(e) {
   }
 }
 
-function getPeserta() {
+function login(username, password) {
+  if (!username || !password) return { ok: false, message: 'Username dan password wajib diisi.' };
+
+  if (String(username).toLowerCase() === 'admin') {
+    if (password !== ADMIN_PASSWORD) return { ok: false, message: 'Username atau password salah.' };
+    return { ok: true, role: 'admin' };
+  }
+
   const sheet = getSheet('Peserta');
-  const rows = sheet.getDataRange().getValues().slice(1).filter(r => r[0]);
-  return { ok: true, peserta: rows.map(r => ({ nim: String(r[0]), nama: String(r[1]) })) };
+  const data = sheet.getDataRange().getValues();
+  const rowIndex = findPesertaRowIndex(data, username);
+  if (rowIndex === -1) return { ok: false, message: 'Username atau password salah.' };
+
+  const storedPassword = data[rowIndex][2];
+  const nama = data[rowIndex][1];
+  if (!storedPassword) return { ok: false, message: 'Password belum diset admin. Hubungi admin.' };
+  if (String(storedPassword) !== String(password)) return { ok: false, message: 'Username atau password salah.' };
+
+  return { ok: true, role: 'peserta', nim: String(username), nama };
 }
 
 function getPesertaAdmin(password) {
@@ -162,28 +175,6 @@ function resetPasswordPeserta(password, nim, newPassword) {
   return { ok: true, message: 'Password berhasil direset.' };
 }
 
-function loginPeserta(nim, password) {
-  if (!nim || !password) return { ok: false, message: 'NIM dan password wajib diisi.' };
-
-  const sheet = getSheet('Peserta');
-  const data = sheet.getDataRange().getValues();
-  const rowIndex = findPesertaRowIndex(data, nim);
-  if (rowIndex === -1) return { ok: false, message: 'NIM tidak terdaftar. Hubungi admin.' };
-
-  const storedPassword = data[rowIndex][2];
-  const nama = data[rowIndex][1];
-
-  if (!storedPassword) {
-    return { ok: false, message: 'Password belum diset admin. Hubungi admin.' };
-  }
-
-  if (String(storedPassword) !== String(password)) {
-    return { ok: false, message: 'Password salah.' };
-  }
-
-  return { ok: true, nim: String(nim), nama };
-}
-
 function generateToken(password) {
   if (!checkAdmin(password)) return { ok: false, message: 'Password salah' };
   const sheet = getSheet('QR_Tokens');
@@ -231,6 +222,15 @@ function submitAbsen(params) {
 
   absensiSheet.appendRow([tanggal, nim, pesertaRow[1], new Date(), 'Hadir']);
   return { ok: true, message: 'Absen berhasil dicatat!', nama: pesertaRow[1] };
+}
+
+function getStatusHariIni(nim) {
+  if (!nim) return { ok: false, message: 'NIM wajib diisi.' };
+  const tanggal = todayStr();
+  const row = getSheet('Absensi').getDataRange().getValues().slice(1)
+    .find(r => normalizeTanggal(r[0]) === tanggal && String(r[1]) === String(nim));
+  if (!row) return { ok: true, sudahAbsen: false };
+  return { ok: true, sudahAbsen: true, waktu: Utilities.formatDate(new Date(row[3]), TIMEZONE, 'HH:mm') };
 }
 
 function getRekap(password, tanggal) {
