@@ -3,10 +3,11 @@
 // ============================================================
 // Cara pakai:
 // 1. Buat Google Spreadsheet baru dengan 3 sheet/tab:
-//    - "Peserta"   -> kolom A: NIM, B: Nama, C: Password (isi NIM+Nama manual, kolom Password dibiarkan kosong -
-//                     otomatis terisi saat peserta login pertama kali)
+//    - "Peserta"   -> kolom A: NIM, B: Nama, C: Password. Isi lewat menu "Kelola Peserta" di admin.html
+//                     (password wajib diisi admin saat menambahkan peserta), atau isi manual di sheet ini.
 //    - "QR_Tokens" -> kolom A: Tanggal, B: Token, C: DibuatPada (biarkan kosong, diisi otomatis)
 //    - "Absensi"   -> kolom A: Tanggal, B: NIM, C: Nama, D: Waktu, E: Status (biarkan kosong, diisi otomatis)
+//    - "Laporan"   -> kolom A: Tanggal, B: NIM, C: Nama, D: Judul, E: NamaFile, F: URL, G: Waktu (biarkan kosong, diisi otomatis)
 // 2. Buka Extensions > Apps Script di spreadsheet tsb, hapus isi default,
 //    lalu paste seluruh isi file ini.
 // 3. Ganti SHEET_ID dan ADMIN_PASSWORD di bawah ini.
@@ -27,7 +28,12 @@ function todayStr() {
   return Utilities.formatDate(new Date(), TIMEZONE, 'yyyy-MM-dd');
 }
 
-function jsonOut(obj) {
+function normalizeTanggal(value) {
+  if (value instanceof Date) return Utilities.formatDate(value, TIMEZONE, 'yyyy-MM-dd');
+  return String(value);
+}
+
+function jsonOut(obj) { 
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -41,6 +47,16 @@ function doGet(e) {
     switch (action) {
       case 'getPeserta':
         return jsonOut(getPeserta());
+      case 'getPesertaAdmin':
+        return jsonOut(getPesertaAdmin(e.parameter.password));
+      case 'addPeserta':
+        return jsonOut(addPeserta(e.parameter.password, e.parameter.nim, e.parameter.nama, e.parameter.pesertaPassword));
+      case 'editPeserta':
+        return jsonOut(editPeserta(e.parameter.password, e.parameter.nim, e.parameter.nama));
+      case 'deletePeserta':
+        return jsonOut(deletePeserta(e.parameter.password, e.parameter.nim));
+      case 'resetPasswordPeserta':
+        return jsonOut(resetPasswordPeserta(e.parameter.password, e.parameter.nim, e.parameter.newPassword));
       case 'loginPeserta':
         return jsonOut(loginPeserta(e.parameter.nim, e.parameter.password));
       case 'checkPassword':
@@ -53,6 +69,28 @@ function doGet(e) {
         return jsonOut(submitAbsen(e.parameter));
       case 'getRekap':
         return jsonOut(getRekap(e.parameter.password, e.parameter.tanggal));
+      case 'getLaporan':
+        return jsonOut(getLaporan());
+      default:
+        return jsonOut({ ok: false, message: 'Aksi tidak dikenal' });
+    }
+  } catch (err) {
+    return jsonOut({ ok: false, message: err.message });
+  }
+}
+
+function doPost(e) {
+  let params;
+  try {
+    params = JSON.parse(e.postData.contents);
+  } catch (err) {
+    return jsonOut({ ok: false, message: 'Data tidak valid.' });
+  }
+
+  try {
+    switch (params.action) {
+      case 'uploadLaporan':
+        return jsonOut(uploadLaporan(params));
       default:
         return jsonOut({ ok: false, message: 'Aksi tidak dikenal' });
     }
@@ -67,20 +105,76 @@ function getPeserta() {
   return { ok: true, peserta: rows.map(r => ({ nim: String(r[0]), nama: String(r[1]) })) };
 }
 
+function getPesertaAdmin(password) {
+  if (!checkAdmin(password)) return { ok: false, message: 'Password salah' };
+  const rows = getSheet('Peserta').getDataRange().getValues().slice(1).filter(r => r[0]);
+  return { ok: true, peserta: rows.map(r => ({ nim: String(r[0]), nama: String(r[1]), hasPassword: !!r[2] })) };
+}
+
+function findPesertaRowIndex(data, nim) {
+  return data.findIndex((r, i) => i > 0 && String(r[0]) === String(nim));
+}
+
+function addPeserta(password, nim, nama, pesertaPassword) {
+  if (!checkAdmin(password)) return { ok: false, message: 'Password salah' };
+  if (!nim || !nama || !pesertaPassword) return { ok: false, message: 'NIM, Nama, dan Password wajib diisi.' };
+
+  const sheet = getSheet('Peserta');
+  const data = sheet.getDataRange().getValues();
+  if (findPesertaRowIndex(data, nim) !== -1) return { ok: false, message: 'NIM sudah terdaftar.' };
+
+  sheet.appendRow([nim, nama, pesertaPassword]);
+  return { ok: true, message: 'Peserta berhasil ditambahkan.' };
+}
+
+function editPeserta(password, nim, nama) {
+  if (!checkAdmin(password)) return { ok: false, message: 'Password salah' };
+  if (!nim || !nama) return { ok: false, message: 'NIM dan Nama wajib diisi.' };
+
+  const sheet = getSheet('Peserta');
+  const rowIndex = findPesertaRowIndex(sheet.getDataRange().getValues(), nim);
+  if (rowIndex === -1) return { ok: false, message: 'NIM tidak ditemukan.' };
+
+  sheet.getRange(rowIndex + 1, 2).setValue(nama);
+  return { ok: true, message: 'Nama berhasil diperbarui.' };
+}
+
+function deletePeserta(password, nim) {
+  if (!checkAdmin(password)) return { ok: false, message: 'Password salah' };
+
+  const sheet = getSheet('Peserta');
+  const rowIndex = findPesertaRowIndex(sheet.getDataRange().getValues(), nim);
+  if (rowIndex === -1) return { ok: false, message: 'NIM tidak ditemukan.' };
+
+  sheet.deleteRow(rowIndex + 1);
+  return { ok: true, message: 'Peserta berhasil dihapus.' };
+}
+
+function resetPasswordPeserta(password, nim, newPassword) {
+  if (!checkAdmin(password)) return { ok: false, message: 'Password salah' };
+  if (!newPassword) return { ok: false, message: 'Password baru wajib diisi.' };
+
+  const sheet = getSheet('Peserta');
+  const rowIndex = findPesertaRowIndex(sheet.getDataRange().getValues(), nim);
+  if (rowIndex === -1) return { ok: false, message: 'NIM tidak ditemukan.' };
+
+  sheet.getRange(rowIndex + 1, 3).setValue(newPassword);
+  return { ok: true, message: 'Password berhasil direset.' };
+}
+
 function loginPeserta(nim, password) {
   if (!nim || !password) return { ok: false, message: 'NIM dan password wajib diisi.' };
 
   const sheet = getSheet('Peserta');
   const data = sheet.getDataRange().getValues();
-  const rowIndex = data.findIndex((r, i) => i > 0 && String(r[0]) === String(nim));
+  const rowIndex = findPesertaRowIndex(data, nim);
   if (rowIndex === -1) return { ok: false, message: 'NIM tidak terdaftar. Hubungi admin.' };
 
   const storedPassword = data[rowIndex][2];
   const nama = data[rowIndex][1];
 
   if (!storedPassword) {
-    sheet.getRange(rowIndex + 1, 3).setValue(password);
-    return { ok: true, nim: String(nim), nama, message: 'Password berhasil dibuat.' };
+    return { ok: false, message: 'Password belum diset admin. Hubungi admin.' };
   }
 
   if (String(storedPassword) !== String(password)) {
@@ -94,7 +188,7 @@ function generateToken(password) {
   if (!checkAdmin(password)) return { ok: false, message: 'Password salah' };
   const sheet = getSheet('QR_Tokens');
   const tanggal = todayStr();
-  const existing = sheet.getDataRange().getValues().slice(1).find(r => r[0] === tanggal);
+  const existing = sheet.getDataRange().getValues().slice(1).find(r => normalizeTanggal(r[0]) === tanggal);
   if (existing) return { ok: true, tanggal, token: existing[1] };
   const token = Utilities.getUuid();
   sheet.appendRow([tanggal, token, new Date()]);
@@ -105,7 +199,7 @@ function getTodayToken(password) {
   if (!checkAdmin(password)) return { ok: false, message: 'Password salah' };
   const sheet = getSheet('QR_Tokens');
   const tanggal = todayStr();
-  const existing = sheet.getDataRange().getValues().slice(1).find(r => r[0] === tanggal);
+  const existing = sheet.getDataRange().getValues().slice(1).find(r => normalizeTanggal(r[0]) === tanggal);
   if (!existing) return { ok: false, message: 'Belum ada QR untuk hari ini' };
   return { ok: true, tanggal, token: existing[1] };
 }
@@ -117,7 +211,7 @@ function submitAbsen(params) {
     return { ok: false, message: 'QR ini bukan untuk hari ini. Gunakan QR yang berlaku hari ini.' };
   }
 
-  const tokenRow = getSheet('QR_Tokens').getDataRange().getValues().slice(1).find(r => r[0] === tanggal);
+  const tokenRow = getSheet('QR_Tokens').getDataRange().getValues().slice(1).find(r => normalizeTanggal(r[0]) === tanggal);
   if (!tokenRow || String(tokenRow[1]) !== String(token)) {
     return { ok: false, message: 'QR tidak valid.' };
   }
@@ -129,7 +223,7 @@ function submitAbsen(params) {
 
   const absensiSheet = getSheet('Absensi');
   const already = absensiSheet.getDataRange().getValues().slice(1)
-    .find(r => r[0] === tanggal && String(r[1]) === String(nim));
+    .find(r => normalizeTanggal(r[0]) === tanggal && String(r[1]) === String(nim));
   if (already) {
     const jam = Utilities.formatDate(new Date(already[3]), TIMEZONE, 'HH:mm');
     return { ok: false, message: `Kamu sudah absen hari ini pukul ${jam}.` };
@@ -144,7 +238,7 @@ function getRekap(password, tanggal) {
   const targetTanggal = tanggal || todayStr();
 
   const peserta = getSheet('Peserta').getDataRange().getValues().slice(1).filter(r => r[0]);
-  const absensi = getSheet('Absensi').getDataRange().getValues().slice(1).filter(r => r[0] === targetTanggal);
+  const absensi = getSheet('Absensi').getDataRange().getValues().slice(1).filter(r => normalizeTanggal(r[0]) === targetTanggal);
 
   const hadirMap = {};
   absensi.forEach(r => { hadirMap[String(r[1])] = r[3]; });
@@ -161,4 +255,42 @@ function getRekap(password, tanggal) {
   });
 
   return { ok: true, tanggal: targetTanggal, rekap };
+}
+
+function getLaporanFolder() {
+  const folders = DriveApp.getFoldersByName('Laporan Absensi KKN');
+  if (folders.hasNext()) return folders.next();
+  return DriveApp.createFolder('Laporan Absensi KKN');
+}
+
+function uploadLaporan(params) {
+  const { nim, nama, judul, fileName, mimeType, fileData } = params;
+  if (!nim || !nama || !fileName || !fileData) {
+    return { ok: false, message: 'Data laporan tidak lengkap.' };
+  }
+
+  const pesertaRow = getSheet('Peserta').getDataRange().getValues().slice(1)
+    .find(r => String(r[0]) === String(nim));
+  if (!pesertaRow) return { ok: false, message: 'NIM tidak ditemukan di daftar peserta.' };
+
+  const bytes = Utilities.base64Decode(fileData);
+  const blob = Utilities.newBlob(bytes, mimeType || 'application/octet-stream', fileName);
+  const file = getLaporanFolder().createFile(blob);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+  getSheet('Laporan').appendRow([todayStr(), nim, nama, judul || '', fileName, file.getUrl(), new Date()]);
+  return { ok: true, message: 'Laporan berhasil diupload.', url: file.getUrl() };
+}
+
+function getLaporan() {
+  const rows = getSheet('Laporan').getDataRange().getValues().slice(1).filter(r => r[0]);
+  const laporan = rows.map(r => ({
+    tanggal: normalizeTanggal(r[0]),
+    nim: String(r[1]),
+    nama: r[2],
+    judul: r[3],
+    fileName: r[4],
+    url: r[5],
+  })).reverse();
+  return { ok: true, laporan };
 }
