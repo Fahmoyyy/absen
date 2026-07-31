@@ -7,7 +7,9 @@
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center p-4">
-  <div class="bg-white rounded-3xl shadow-xl p-8 w-full max-w-sm">
+
+  <!-- LOGIN -->
+  <div id="login-card" class="bg-white rounded-3xl shadow-xl p-8 w-full max-w-sm">
     <div class="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4 text-3xl">
       🎓
     </div>
@@ -28,6 +30,38 @@
       Masuk
     </button>
     <p id="login-error" class="text-red-600 text-sm mt-3 text-center hidden"></p>
+
+    <button id="show-change-password-btn" class="block mx-auto text-teal-600 text-sm mt-5 hover:underline">
+      Lupa / Ubah Password
+    </button>
+  </div>
+
+  <!-- UBAH PASSWORD -->
+  <div id="change-password-card" class="hidden bg-white rounded-3xl shadow-xl p-8 w-full max-w-sm">
+    <h1 class="text-xl font-bold text-gray-800 mb-1 text-center">Ubah Password</h1>
+    <p class="text-sm text-gray-400 mb-6 text-center">Khusus peserta</p>
+
+    <label class="block text-sm text-gray-600 mb-1">NIM</label>
+    <input id="cp-nim" type="text" placeholder="Masukkan NIM"
+           class="w-full border border-gray-300 rounded-xl px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+
+    <label class="block text-sm text-gray-600 mb-1">Password Lama</label>
+    <input id="cp-old-password" type="password" placeholder="Password lama"
+           class="w-full border border-gray-300 rounded-xl px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+
+    <label class="block text-sm text-gray-600 mb-1">Password Baru</label>
+    <input id="cp-new-password" type="password" placeholder="Password baru"
+           class="w-full border border-gray-300 rounded-xl px-4 py-3 mb-2 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+
+    <button id="change-password-btn"
+            class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 rounded-xl transition mt-3">
+      Ubah Password
+    </button>
+    <p id="change-password-message" class="text-sm mt-3 text-center hidden"></p>
+
+    <button id="back-to-login-btn" class="block mx-auto text-gray-400 text-sm mt-5 hover:underline">
+      &larr; Kembali ke Login
+    </button>
   </div>
 
   <script src="js/config.js"></script>
@@ -73,6 +107,55 @@
     loginBtn.addEventListener('click', doLogin);
     passwordInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') doLogin();
+    });
+
+    // --- Ubah Password ---
+    const loginCard = document.getElementById('login-card');
+    const changePasswordCard = document.getElementById('change-password-card');
+    const changePasswordMessage = document.getElementById('change-password-message');
+    const changePasswordBtn = document.getElementById('change-password-btn');
+
+    document.getElementById('show-change-password-btn').addEventListener('click', () => {
+      loginCard.classList.add('hidden');
+      changePasswordCard.classList.remove('hidden');
+    });
+
+    document.getElementById('back-to-login-btn').addEventListener('click', () => {
+      changePasswordCard.classList.add('hidden');
+      loginCard.classList.remove('hidden');
+    });
+
+    changePasswordBtn.addEventListener('click', async () => {
+      const nim = document.getElementById('cp-nim').value.trim();
+      const oldPassword = document.getElementById('cp-old-password').value;
+      const newPassword = document.getElementById('cp-new-password').value;
+
+      changePasswordMessage.classList.add('hidden');
+
+      if (!nim || !oldPassword || !newPassword) {
+        changePasswordMessage.textContent = 'Semua kolom wajib diisi.';
+        changePasswordMessage.className = 'text-sm mt-3 text-center text-red-600';
+        changePasswordMessage.classList.remove('hidden');
+        return;
+      }
+
+      changePasswordBtn.disabled = true;
+      changePasswordBtn.textContent = 'Memproses...';
+      const result = await callApi('changePassword', { nim, oldPassword, newPassword });
+      changePasswordBtn.disabled = false;
+      changePasswordBtn.textContent = 'Ubah Password';
+
+      changePasswordMessage.textContent = result.message;
+      changePasswordMessage.className = result.ok
+        ? 'text-sm mt-3 text-center text-green-600'
+        : 'text-sm mt-3 text-center text-red-600';
+      changePasswordMessage.classList.remove('hidden');
+
+      if (result.ok) {
+        document.getElementById('cp-nim').value = '';
+        document.getElementById('cp-old-password').value = '';
+        document.getElementById('cp-new-password').value = '';
+      }
     });
   </script>
 </body>

@@ -57,6 +57,8 @@ function doGet(e) {
         return jsonOut(deletePeserta(e.parameter.password, e.parameter.nim));
       case 'resetPasswordPeserta':
         return jsonOut(resetPasswordPeserta(e.parameter.password, e.parameter.nim, e.parameter.newPassword));
+      case 'changePassword':
+        return jsonOut(changePassword(e.parameter.nim, e.parameter.oldPassword, e.parameter.newPassword));
       case 'generateToken':
         return jsonOut(generateToken(e.parameter.password));
       case 'getTodayToken':
@@ -173,6 +175,24 @@ function resetPasswordPeserta(password, nim, newPassword) {
 
   sheet.getRange(rowIndex + 1, 3).setValue(newPassword);
   return { ok: true, message: 'Password berhasil direset.' };
+}
+
+function changePassword(nim, oldPassword, newPassword) {
+  if (!nim || !oldPassword || !newPassword) {
+    return { ok: false, message: 'NIM, password lama, dan password baru wajib diisi.' };
+  }
+
+  const sheet = getSheet('Peserta');
+  const rowIndex = findPesertaRowIndex(sheet.getDataRange().getValues(), nim);
+  if (rowIndex === -1) return { ok: false, message: 'NIM tidak terdaftar.' };
+
+  const storedPassword = sheet.getRange(rowIndex + 1, 3).getValue();
+  if (!storedPassword || String(storedPassword) !== String(oldPassword)) {
+    return { ok: false, message: 'Password lama salah.' };
+  }
+
+  sheet.getRange(rowIndex + 1, 3).setValue(newPassword);
+  return { ok: true, message: 'Password berhasil diubah. Silakan login dengan password baru.' };
 }
 
 function generateToken(password) {
