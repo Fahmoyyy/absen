@@ -11,28 +11,30 @@
   <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
     <h1 class="text-xl font-bold text-gray-800 mb-4 text-center">Absen KKN</h1>
 
-    <!-- SCANNER -->
-    <div id="scan-view">
-      <div id="qr-reader" class="rounded-xl overflow-hidden"></div>
-      <p class="text-center text-gray-400 text-sm mt-3">Arahkan kamera ke QR absensi</p>
+    <!-- LOGIN PESERTA (cuma sekali, disimpan di HP) -->
+    <div id="identify-view" class="hidden">
+      <label class="block text-sm text-gray-600 mb-1">NIM</label>
+      <input id="nim-input" type="text" placeholder="Masukkan NIM"
+             class="w-full border border-gray-300 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      <label class="block text-sm text-gray-600 mb-1">Password</label>
+      <input id="password-input" type="password" placeholder="Masukkan password"
+             class="w-full border border-gray-300 rounded-lg px-4 py-3 mb-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      <p class="text-xs text-gray-400 mb-4">Peserta baru? Ketik NIM &amp; buat password sendiri di sini, otomatis tersimpan untuk login berikutnya.</p>
+      <button id="lanjut-btn"
+              class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition">
+        Masuk
+      </button>
+      <p id="login-error" class="text-red-600 text-sm mt-3 text-center hidden"></p>
     </div>
 
-    <!-- KONFIRMASI -->
-    <div id="confirm-view" class="hidden">
-      <p class="text-center text-gray-500 mb-4">QR terdeteksi untuk tanggal <span id="confirm-tanggal" class="font-semibold"></span></p>
-      <label class="block text-sm text-gray-600 mb-1">Cari nama kamu</label>
-      <input id="nama-input" list="peserta-list" placeholder="Ketik nama atau NIM..."
-             class="w-full border border-gray-300 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-      <datalist id="peserta-list"></datalist>
-      <button id="submit-btn"
-              class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50"
-              disabled>
-        Konfirmasi Absen
-      </button>
-      <button id="scan-again-btn"
-              class="w-full mt-3 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-3 rounded-lg transition">
-        Scan Ulang
-      </button>
+    <!-- SCANNER -->
+    <div id="scan-view" class="hidden">
+      <p class="text-center text-gray-500 text-sm mb-3">
+        Absen sebagai <span id="identity-name" class="font-semibold"></span>
+        · <button class="change-identity-btn text-indigo-600 underline">Ganti</button>
+      </p>
+      <div id="qr-reader" class="rounded-xl overflow-hidden"></div>
+      <p class="text-center text-gray-400 text-sm mt-3">Arahkan kamera ke QR absensi</p>
     </div>
 
     <!-- HASIL -->
@@ -41,7 +43,10 @@
       <p id="result-message" class="text-gray-700 font-medium mb-6"></p>
       <button id="reset-btn"
               class="w-full bg-gray-800 hover:bg-black text-white font-semibold py-3 rounded-lg transition">
-        Kembali
+        Scan Lagi
+      </button>
+      <button class="change-identity-btn w-full mt-3 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-3 rounded-lg transition">
+        Ganti Akun
       </button>
     </div>
 

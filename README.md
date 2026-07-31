@@ -16,7 +16,7 @@ Sistem absensi berbasis QR code harian. Admin generate & cetak QR tiap hari, pes
 
 Buat spreadsheet baru dengan 3 sheet (tab), nama harus persis:
 
-- **Peserta** — kolom A = `NIM`, kolom B = `Nama`. Isi baris 1 sebagai header, lalu isi daftar peserta KKN mulai baris 2.
+- **Peserta** — kolom A = `NIM`, kolom B = `Nama`, kolom C = `Password`. Isi baris 1 sebagai header, lalu isi NIM & Nama peserta KKN mulai baris 2 — kolom Password dibiarkan **kosong**, otomatis terisi saat peserta login pertama kali.
 - **QR_Tokens** — kolom A = `Tanggal`, B = `Token`, C = `DibuatPada`. Cukup isi header di baris 1, sisanya terisi otomatis.
 - **Absensi** — kolom A = `Tanggal`, B = `NIM`, C = `Nama`, D = `Waktu`, E = `Status`. Cukup isi header, sisanya otomatis.
 
@@ -55,13 +55,15 @@ vercel
 3. Klik "Cetak QR" untuk print dan tempel di lokasi absen.
 4. Untuk cek kehadiran, buka bagian "Rekap Kehadiran", pilih tanggal, klik "Muat Rekap".
 
-**Peserta:**
-1. Buka `scan.html` di HP, izinkan akses kamera.
-2. Scan QR yang ditempel.
-3. Cari & pilih nama sendiri dari daftar, klik "Konfirmasi Absen".
+**Peserta (sekali di HP masing-masing):**
+1. Buka `scan.html` di HP.
+2. Login pakai NIM + password. Kalau ini kali pertama, password yang diketik otomatis jadi password mereka seterusnya (tidak perlu didaftarkan admin dulu, asal NIM-nya sudah ada di sheet **Peserta**).
+3. Setelah login, identitas disimpan di HP tsb — kunjungan berikutnya langsung masuk ke halaman scan tanpa perlu login lagi (kecuali klik "Ganti Akun").
+4. Izinkan akses kamera, scan QR yang ditempel — absen otomatis tercatat.
 
 ## Catatan
 
 - QR berbeda tiap hari (berisi token unik + tanggal). QR kemarin otomatis ditolak kalau di-scan hari berikutnya.
 - Sistem mencegah 1 peserta absen 2x di hari yang sama.
 - Menambah/mengubah daftar peserta cukup edit langsung sheet **Peserta** di Google Sheets — tidak perlu redeploy apa pun.
+- Password peserta disimpan apa adanya (plain text) di sheet **Peserta** kolom C — cukup aman untuk kebutuhan internal KKN, tapi jangan pakai password yang sama dengan akun penting lain.

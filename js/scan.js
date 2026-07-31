@@ -1,15 +1,77 @@
+const IDENTITY_KEY = 'kkn_identity';
+
+const identifyView = document.getElementById('identify-view');
 const scanView = document.getElementById('scan-view');
-const confirmView = document.getElementById('confirm-view');
 const resultView = document.getElementById('result-view');
 
-const namaInput = document.getElementById('nama-input');
-const pesertaList = document.getElementById('peserta-list');
-const submitBtn = document.getElementById('submit-btn');
+const nimInput = document.getElementById('nim-input');
+const passwordInput = document.getElementById('password-input');
+const lanjutBtn = document.getElementById('lanjut-btn');
+const loginError = document.getElementById('login-error');
+const identityNameEl = document.getElementById('identity-name');
 
 let scanner = null;
-let scannedData = null; // { t: token, d: tanggal }
-let pesertaMap = {}; // "Nama — NIM" -> nim
-let pesertaLoaded = false;
+let identity = null; // { nim, nama }
+
+function getIdentity() {
+  const raw = localStorage.getItem(IDENTITY_KEY);
+  return raw ? JSON.parse(raw) : null;
+}
+
+function saveIdentity(id) {
+  localStorage.setItem(IDENTITY_KEY, JSON.stringify(id));
+}
+
+function clearIdentity() {
+  localStorage.removeItem(IDENTITY_KEY);
+}
+
+lanjutBtn.addEventListener('click', async () => {
+  const nim = nimInput.value.trim();
+  const password = passwordInput.value;
+  loginError.classList.add('hidden');
+
+  if (!nim || !password) {
+    loginError.textContent = 'NIM dan password wajib diisi.';
+    loginError.classList.remove('hidden');
+    return;
+  }
+
+  lanjutBtn.disabled = true;
+  lanjutBtn.textContent = 'Memeriksa...';
+  const result = await callApi('loginPeserta', { nim, password });
+  lanjutBtn.disabled = false;
+  lanjutBtn.textContent = 'Masuk';
+
+  if (!result.ok) {
+    loginError.textContent = result.message;
+    loginError.classList.remove('hidden');
+    return;
+  }
+
+  identity = { nim: result.nim, nama: result.nama };
+  saveIdentity(identity);
+  showScanView();
+});
+
+document.querySelectorAll('.change-identity-btn').forEach(btn => btn.addEventListener('click', () => {
+  clearIdentity();
+  identity = null;
+  if (scanner) scanner.stop().catch(() => {});
+  scanView.classList.add('hidden');
+  resultView.classList.add('hidden');
+  identifyView.classList.remove('hidden');
+  nimInput.value = '';
+  passwordInput.value = '';
+}));
+
+function showScanView() {
+  identifyView.classList.add('hidden');
+  resultView.classList.add('hidden');
+  scanView.classList.remove('hidden');
+  identityNameEl.textContent = identity.nama;
+  startScanner();
+}
 
 function startScanner() {
   scanner = new Html5Qrcode('qr-reader');
@@ -31,65 +93,27 @@ async function onScanSuccess(decodedText) {
   if (!data.t || !data.d) return;
 
   await scanner.stop();
-  scannedData = data;
-
-  document.getElementById('confirm-tanggal').textContent = data.d;
   scanView.classList.add('hidden');
-  confirmView.classList.remove('hidden');
-
-  if (!pesertaLoaded) await loadPeserta();
-}
-
-async function loadPeserta() {
-  const result = await callApi('getPeserta');
-  if (!result.ok) return;
-  pesertaMap = {};
-  pesertaList.innerHTML = '';
-  result.peserta.forEach(p => {
-    const label = `${p.nama} — ${p.nim}`;
-    pesertaMap[label] = p.nim;
-    const opt = document.createElement('option');
-    opt.value = label;
-    pesertaList.appendChild(opt);
-  });
-  pesertaLoaded = true;
-}
-
-namaInput.addEventListener('input', () => {
-  submitBtn.disabled = !pesertaMap[namaInput.value];
-});
-
-submitBtn.addEventListener('click', async () => {
-  const nim = pesertaMap[namaInput.value];
-  if (!nim || !scannedData) return;
-
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Mengirim...';
 
   const result = await callApi('submitAbsen', {
-    token: scannedData.t,
-    tanggal: scannedData.d,
-    nim,
+    token: data.t,
+    tanggal: data.d,
+    nim: identity.nim,
   });
 
-  submitBtn.textContent = 'Konfirmasi Absen';
-  confirmView.classList.add('hidden');
   resultView.classList.remove('hidden');
   document.getElementById('result-icon').textContent = result.ok ? '✅' : '⚠️';
   document.getElementById('result-message').textContent = result.message;
-});
-
-document.getElementById('scan-again-btn').addEventListener('click', resetToScan);
-document.getElementById('reset-btn').addEventListener('click', resetToScan);
-
-function resetToScan() {
-  scannedData = null;
-  namaInput.value = '';
-  submitBtn.disabled = true;
-  resultView.classList.add('hidden');
-  confirmView.classList.add('hidden');
-  scanView.classList.remove('hidden');
-  startScanner();
 }
 
-startScanner();
+document.getElementById('reset-btn').addEventListener('click', () => {
+  resultView.classList.add('hidden');
+  showScanView();
+});
+
+identity = getIdentity();
+if (identity) {
+  showScanView();
+} else {
+  identifyView.classList.remove('hidden');
+}

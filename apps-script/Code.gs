@@ -3,7 +3,8 @@
 // ============================================================
 // Cara pakai:
 // 1. Buat Google Spreadsheet baru dengan 3 sheet/tab:
-//    - "Peserta"   -> kolom A: NIM, kolom B: Nama (isi manual daftar peserta KKN)
+//    - "Peserta"   -> kolom A: NIM, B: Nama, C: Password (isi NIM+Nama manual, kolom Password dibiarkan kosong -
+//                     otomatis terisi saat peserta login pertama kali)
 //    - "QR_Tokens" -> kolom A: Tanggal, B: Token, C: DibuatPada (biarkan kosong, diisi otomatis)
 //    - "Absensi"   -> kolom A: Tanggal, B: NIM, C: Nama, D: Waktu, E: Status (biarkan kosong, diisi otomatis)
 // 2. Buka Extensions > Apps Script di spreadsheet tsb, hapus isi default,
@@ -14,8 +15,8 @@
 //    - Who has access: Anyone
 // 5. Copy URL yang diberikan, tempel ke js/config.js (APPS_SCRIPT_URL).
 
-const SHEET_ID = 'ISI_DENGAN_ID_SPREADSHEET_ANDA';
-const ADMIN_PASSWORD = 'ganti-password-ini';
+const SHEET_ID = '17LMpzzUaOTVzZk13W4gvaBdekmSSbfHVj5ooFfUlDAY';
+const ADMIN_PASSWORD = 'barset212';
 const TIMEZONE = 'Asia/Jakarta';
 
 function getSheet(name) {
@@ -40,6 +41,8 @@ function doGet(e) {
     switch (action) {
       case 'getPeserta':
         return jsonOut(getPeserta());
+      case 'loginPeserta':
+        return jsonOut(loginPeserta(e.parameter.nim, e.parameter.password));
       case 'checkPassword':
         return jsonOut({ ok: checkAdmin(e.parameter.password) });
       case 'generateToken':
@@ -62,6 +65,29 @@ function getPeserta() {
   const sheet = getSheet('Peserta');
   const rows = sheet.getDataRange().getValues().slice(1).filter(r => r[0]);
   return { ok: true, peserta: rows.map(r => ({ nim: String(r[0]), nama: String(r[1]) })) };
+}
+
+function loginPeserta(nim, password) {
+  if (!nim || !password) return { ok: false, message: 'NIM dan password wajib diisi.' };
+
+  const sheet = getSheet('Peserta');
+  const data = sheet.getDataRange().getValues();
+  const rowIndex = data.findIndex((r, i) => i > 0 && String(r[0]) === String(nim));
+  if (rowIndex === -1) return { ok: false, message: 'NIM tidak terdaftar. Hubungi admin.' };
+
+  const storedPassword = data[rowIndex][2];
+  const nama = data[rowIndex][1];
+
+  if (!storedPassword) {
+    sheet.getRange(rowIndex + 1, 3).setValue(password);
+    return { ok: true, nim: String(nim), nama, message: 'Password berhasil dibuat.' };
+  }
+
+  if (String(storedPassword) !== String(password)) {
+    return { ok: false, message: 'Password salah.' };
+  }
+
+  return { ok: true, nim: String(nim), nama };
 }
 
 function generateToken(password) {
