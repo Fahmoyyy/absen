@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin - Absensi KKN</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<style media="print">
+  body * { visibility: hidden; }
+  #print-area, #print-area * { visibility: visible; }
+  #print-area {
+    position: absolute; top: 0; left: 0; width: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+</style>
+</head>
+<body class="min-h-screen bg-gray-100">
+
+  <!-- LOGIN -->
+  <div id="login-view" class="min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm">
+      <h1 class="text-xl font-bold text-gray-800 mb-6 text-center">Login Admin</h1>
+      <input id="password-input" type="password" placeholder="Password admin"
+             class="w-full border border-gray-300 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      <button id="login-btn"
+              class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition">
+        Masuk
+      </button>
+      <p id="login-error" class="text-red-600 text-sm mt-3 text-center hidden">Password salah.</p>
+      <a href="index.html" class="block text-center text-gray-400 text-sm mt-6">&larr; Kembali</a>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboard-view" class="hidden max-w-3xl mx-auto p-4 py-8 space-y-6">
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold text-gray-800">Dashboard Admin</h1>
+      <button id="logout-btn" class="text-sm text-gray-500 hover:text-red-600">Keluar</button>
+    </div>
+
+    <!-- QR Hari Ini -->
+    <div class="bg-white rounded-2xl shadow p-6">
+      <h2 class="text-lg font-semibold text-gray-800 mb-4">QR Absen Hari Ini</h2>
+      <button id="generate-btn"
+              class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2.5 rounded-lg transition">
+        Tampilkan / Buat QR Hari Ini
+      </button>
+
+      <div id="qr-result" class="hidden mt-6 flex flex-col items-center">
+        <div id="print-area" class="flex flex-col items-center gap-2">
+          <p class="text-sm text-gray-500">ABSENSI KKN</p>
+          <p id="qr-tanggal" class="text-xl font-bold text-gray-800"></p>
+          <canvas id="qr-canvas"></canvas>
+          <p class="text-sm text-gray-400">Scan QR ini untuk mengisi absensi hari ini</p>
+        </div>
+        <button id="print-btn"
+                class="mt-6 bg-gray-800 hover:bg-black text-white font-semibold px-5 py-2.5 rounded-lg transition">
+          🖨️ Cetak QR
+        </button>
+      </div>
+    </div>
+
+    <!-- Rekap -->
+    <div class="bg-white rounded-2xl shadow p-6">
+      <h2 class="text-lg font-semibold text-gray-800 mb-4">Rekap Kehadiran</h2>
+      <div class="flex flex-wrap gap-3 mb-4">
+        <input id="rekap-tanggal" type="date"
+               class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        <button id="rekap-btn"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-lg transition">
+          Muat Rekap
+        </button>
+      </div>
+      <p id="rekap-summary" class="text-sm text-gray-500 mb-3"></p>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead>
+            <tr class="border-b border-gray-200 text-gray-500">
+              <th class="py-2 pr-4">NIM</th>
+              <th class="py-2 pr-4">Nama</th>
+              <th class="py-2 pr-4">Status</th>
+              <th class="py-2 pr-4">Waktu</th>
+            </tr>
+          </thead>
+          <tbody id="rekap-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
