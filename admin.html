@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Admin - Absensi KKN</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style media="print">
   body * { visibility: hidden; }
   #print-area, #print-area * { visibility: visible; }
@@ -51,7 +51,7 @@
         <div id="print-area" class="flex flex-col items-center gap-2">
           <p class="text-sm text-gray-500">ABSENSI KKN</p>
           <p id="qr-tanggal" class="text-xl font-bold text-gray-800"></p>
-          <canvas id="qr-canvas"></canvas>
+          <div id="qr-canvas"></div>
           <p class="text-sm text-gray-400">Scan QR ini untuk mengisi absensi hari ini</p>
         </div>
         <button id="print-btn"

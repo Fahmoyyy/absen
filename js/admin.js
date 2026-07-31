@@ -50,7 +50,9 @@ document.getElementById('generate-btn').addEventListener('click', async () => {
 function renderQr(tanggal, token) {
   document.getElementById('qr-tanggal').textContent = tanggal;
   const payload = JSON.stringify({ t: token, d: tanggal });
-  QRCode.toCanvas(document.getElementById('qr-canvas'), payload, { width: 260 });
+  const qrContainer = document.getElementById('qr-canvas');
+  qrContainer.innerHTML = '';
+  new QRCode(qrContainer, { text: payload, width: 260, height: 260 });
   document.getElementById('qr-result').classList.remove('hidden');
 }
 
