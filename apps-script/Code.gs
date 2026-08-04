@@ -28,9 +28,23 @@ function todayStr() {
   return Utilities.formatDate(new Date(), TIMEZONE, 'yyyy-MM-dd');
 }
 
+function nowStr() {
+  return Utilities.formatDate(new Date(), TIMEZONE, 'yyyy-MM-dd HH:mm:ss');
+}
+
 function normalizeTanggal(value) {
   if (value instanceof Date) return Utilities.formatDate(value, TIMEZONE, 'yyyy-MM-dd');
   return String(value);
+}
+
+// Menulis satu baris sebagai teks polos (format '@'), supaya Google Sheets
+// tidak otomatis mengubah tanggal/jam jadi tipe Date yang bisa bergeser
+// karena setting timezone spreadsheet.
+function appendRowAsText(sheet, values) {
+  const targetRow = sheet.getLastRow() + 1;
+  const range = sheet.getRange(targetRow, 1, 1, values.length);
+  range.setNumberFormat('@');
+  range.setValues([values]);
 }
 
 function jsonOut(obj) { 
@@ -195,6 +209,12 @@ function changePassword(nim, oldPassword, newPassword) {
   return { ok: true, message: 'Password berhasil diubah. Silakan login dengan password baru.' };
 }
 
+function formatJam(value, withSeconds) {
+  if (value instanceof Date) return Utilities.formatDate(value, TIMEZONE, withSeconds ? 'HH:mm:ss' : 'HH:mm');
+  const time = String(value).split(' ')[1] || '';
+  return withSeconds ? time : time.substring(0, 5);
+}
+
 function generateToken(password) {
   if (!checkAdmin(password)) return { ok: false, message: 'Password salah' };
   const sheet = getSheet('QR_Tokens');
@@ -202,7 +222,7 @@ function generateToken(password) {
   const existing = sheet.getDataRange().getValues().slice(1).find(r => normalizeTanggal(r[0]) === tanggal);
   if (existing) return { ok: true, tanggal, token: existing[1] };
   const token = Utilities.getUuid();
-  sheet.appendRow([tanggal, token, new Date()]);
+  appendRowAsText(sheet, [tanggal, token, nowStr()]);
   return { ok: true, tanggal, token };
 }
 
@@ -236,11 +256,10 @@ function submitAbsen(params) {
   const already = absensiSheet.getDataRange().getValues().slice(1)
     .find(r => normalizeTanggal(r[0]) === tanggal && String(r[1]) === String(nim));
   if (already) {
-    const jam = Utilities.formatDate(new Date(already[3]), TIMEZONE, 'HH:mm');
-    return { ok: false, message: `Kamu sudah absen hari ini pukul ${jam}.` };
+    return { ok: false, message: `Kamu sudah absen hari ini pukul ${formatJam(already[3], false)}.` };
   }
 
-  absensiSheet.appendRow([tanggal, nim, pesertaRow[1], new Date(), 'Hadir']);
+  appendRowAsText(absensiSheet, [tanggal, nim, pesertaRow[1], nowStr(), 'Hadir']);
   return { ok: true, message: 'Absen berhasil dicatat!', nama: pesertaRow[1] };
 }
 
@@ -250,7 +269,7 @@ function getStatusHariIni(nim) {
   const row = getSheet('Absensi').getDataRange().getValues().slice(1)
     .find(r => normalizeTanggal(r[0]) === tanggal && String(r[1]) === String(nim));
   if (!row) return { ok: true, sudahAbsen: false };
-  return { ok: true, sudahAbsen: true, waktu: Utilities.formatDate(new Date(row[3]), TIMEZONE, 'HH:mm') };
+  return { ok: true, sudahAbsen: true, waktu: formatJam(row[3], false) };
 }
 
 function getRekap(password, tanggal) {
@@ -270,7 +289,7 @@ function getRekap(password, tanggal) {
       nim,
       nama: r[1],
       status: waktu ? 'Hadir' : 'Belum Hadir',
-      waktu: waktu ? Utilities.formatDate(new Date(waktu), TIMEZONE, 'HH:mm:ss') : '-',
+      waktu: waktu ? formatJam(waktu, true) : '-',
     };
   });
 
@@ -298,7 +317,7 @@ function uploadLaporan(params) {
   const file = getLaporanFolder().createFile(blob);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
-  getSheet('Laporan').appendRow([todayStr(), nim, nama, judul || '', fileName, file.getUrl(), new Date()]);
+  appendRowAsText(getSheet('Laporan'), [todayStr(), nim, nama, judul || '', fileName, file.getUrl(), nowStr()]);
   return { ok: true, message: 'Laporan berhasil diupload.', url: file.getUrl() };
 }
 
